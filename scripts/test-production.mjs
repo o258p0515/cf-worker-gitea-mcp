@@ -41,7 +41,11 @@ await t("T4 login/meta/samples/playground JavaScript", async () => {
   const html = await page.text();
   assert.match(html, /Gitea MCP Playground/);
   assert.match(html, /Playground load failed/);
-  const script = html.match(/<script>([\\s\\S]*?)<\\/script>/i);
+  const scriptStart = html.indexOf("<script>");
+  const scriptEnd = html.indexOf("</script>", scriptStart + 8);
+  assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "authenticated playground script exists");
+  const script = html.slice(scriptStart + 8, scriptEnd);
+  assert.doesNotThrow(() => new Function(script), "authenticated playground JavaScript must parse");
   assert.ok(script, "authenticated playground script exists");
   assert.doesNotThrow(() => new Function(script[1]), "authenticated playground JavaScript must parse");
   const m = await (await req("/api/meta", { headers: h })).json();
