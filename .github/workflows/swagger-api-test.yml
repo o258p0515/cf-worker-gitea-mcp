@@ -1,0 +1,35 @@
+name: Swagger API production tools test
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Gitea MCP Worker"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  swagger-api:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test production Swagger API using repository secrets
+        env:
+          CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
+          SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
+          SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
+          GITEA_ACCESS_TOKEN: ${{ secrets.GITEA_ACCESS_TOKEN }}
+          GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
+          GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
+        run: |
+          test -n "$GITEA_ACCESS_TOKEN" || { echo "::error::GITEA_ACCESS_TOKEN secret is missing"; exit 1; }
+          node scripts/test-swagger-api.mjs
