@@ -56,4 +56,4 @@ for(const name of writeNames){
  const body=await blocked.json();assert.equal(body.ok,false,name+" write must be blocked");assert.match(body.error,/Write tool blocked/,name+" write guard explanation");
 }
 assert.equal(apiSuccess,28,"all read tools succeed through API");assert.equal(mcpSuccess,28,"all read tools succeed through MCP");
-console.log("T14 PASS: 48/48 exact tool names on MCP and API; all "+smoke.length+" read tools succeeded through both transports; "+writeNames.length+" write tools verified blocked without confirmation.");
+console.log("T14 PASS: 48/48 exact tool names on MCP and API; all "+smoke.length+" read calls returned non-error JSON through both transports; project_read reports upstream capability status when unavailable; "+writeNames.length+" write tools verified blocked without confirmation.");
