@@ -47,8 +47,7 @@ for(const [name,overrides] of smoke){
  const callRaw=await call.text();let callRpc;
  try{callRpc=JSON.parse(callRaw);}catch{const frames=callRaw.split(/\r?\n/).filter(x=>x.startsWith("data:")).map(x=>x.slice(5).trim());assert.ok(frames.length,name+" MCP JSON-RPC frame");callRpc=JSON.parse(frames.at(-1));}
  assert.ok(callRpc.result||callRpc.error,name+" MCP JSON-RPC result");
- if(callRpc.result?.isError)failures.push(name+" MCP: "+(callRpc.result.content||[]).map(x=>x.text).join(" "));
- else if(callRpc.result)mcpSuccess++;
+ assert.ok(callRpc.result,name+" MCP tool result");assert.notEqual(callRpc.result.isError,true,name+" MCP tool execution: "+(callRpc.result.content||[]).map(x=>x.text).join(" "));mcpSuccess++;
  if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))assert.notEqual(callRpc.result?.isError,true,name+" MCP repository/file read regression");
 }
 for(const name of writeNames){
@@ -56,5 +55,5 @@ for(const name of writeNames){
  assert.equal(blocked.status,403,name+" playground write safety guard");
  const body=await blocked.json();assert.equal(body.ok,false,name+" write must be blocked");assert.match(body.error,/Write tool blocked/,name+" write guard explanation");
 }
-console.log("T14 PASS: 48/48 exact tool names on MCP and API; "+smoke.length+" read tools invoked through both transports ("+apiSuccess+" API success, "+mcpSuccess+" MCP success, "+failures.length+" clean upstream errors); "+writeNames.length+" write tools verified blocked without confirmation.");
-if(failures.length)console.log("T14 clean upstream/resource errors (review individually):\n"+failures.join("\n"));
+assert.equal(apiSuccess,28,"all read tools succeed through API");assert.equal(mcpSuccess,28,"all read tools succeed through MCP");
+console.log("T14 PASS: 48/48 exact tool names on MCP and API; all "+smoke.length+" read tools succeeded through both transports; "+writeNames.length+" write tools verified blocked without confirmation.");
