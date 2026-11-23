@@ -60,4 +60,11 @@ test("project issue move uses the project-scoped endpoint and JSON body",async()
  assert.equal(calls[0].init.method,"POST");
  assert.deepEqual(JSON.parse(calls[0].init.body),{column_id:2,sorting:1});
 });
+test("project_read reports unsupported upstream Projects API as a capability result",async()=>{
+ const tool=management.managementTools.find(t=>t.name==="project_read");
+ const result=await tool.run({method:"list_repo",owner:"acme",repo:"demo"},{request:async()=>{throw new Error("Gitea API 404: 404 page not found");}},{});
+ assert.equal(result.supported,false);
+ assert.equal(result.reason,"upstream_project_api_unavailable");
+ assert.match(result.message,/Gitea instance returned 404/);
+});
 await rm(temp,{recursive:true,force:true});
