@@ -101,7 +101,7 @@ await t("T13 authorization code PKCE via browser approval form", async () => {
   const verifier = "test-verifier-012345678901234567890123456789012345678901";
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+    .replace(/=/g, "").split("+").join("-").split("/").join("_");
   const redirect = "https://any-random-agent.example/cb";
   const params = new URLSearchParams({
     response_type: "code",
