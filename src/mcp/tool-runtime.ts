@@ -13,7 +13,7 @@ export const fields:Record<string,z.ZodTypeAny>={
  tag_name:S.optional(),target:S.optional(),target_commitish:S.optional(),draft:z.boolean().optional(),prerelease:z.boolean().optional(),event:S.optional(),context:S.optional(),target_url:S.optional(),workflow_id:z.union([S,z.number()]).optional(),inputs:z.record(S,z.unknown()).optional(),time:z.number().optional(),dependency_index:z.number().int().optional(),
  content_base64:S.optional(),value:S.optional(),board_type:S.optional(),file:S.optional(),files:z.array(z.unknown()).optional(),organization:S.optional(),merge_style:S.optional(),Do:S.optional(),force_merge:z.boolean().optional(),delete_branch_after_merge:z.boolean().optional(),comments:z.array(z.unknown()).optional(),encrypted_value:S.optional(),key_id:S.optional(),last_read_at:S.optional(),status_types:S.optional(),since:S.optional(),before:S.optional(),user_name:S.optional(),created:S.optional(),confirmation:z.literal(true).optional(),method:S.optional()
 };
-export type Route={method:string;path:string;body?:string[];query?:string[];required?:string[];raw?:boolean};
+export type Route={method:string;path:string;body?:string[];query?:string[];required?:string[];raw?:boolean;api?: "packages"};
 const enc=(v:unknown)=>encodeURIComponent(String(v??""));
 function specialClient(g:Gitea,a:Record<string,any>):Gitea{
  return new Proxy(g,{get(target,key){
@@ -49,11 +49,12 @@ export function makeTool(name:string,scope:string,access:"read"|"write",descript
   const p=path(r.path,args);
   if(r.method==="GET"){const q=new URLSearchParams();for(const k of r.query||[])if(args[k]!==undefined&&args[k]!==null&&args[k]!=="")q.set(k,Array.isArray(args[k])?args[k].join(","):String(args[k]));return r.raw?g.requestText(p+(q.size?"?"+q:"")):g.request(p+(q.size?"?"+q:""));}
   const b=r.body?.length?Object.fromEntries(r.body.filter(k=>args[k]!==undefined).map(k=>[k,args[k]])):undefined;
-  return g.request(p,{method:r.method,...(b?{body:JSON.stringify(b)}:{})});
+  const init={method:r.method,...(b?{body:JSON.stringify(b)}:{})};
+  return r.api==="packages"?g.packageRequest(p,init):g.request(p,init);
  }};
 }
 export const GET=(path:string,query?:string[],required?:string[],raw=false):Route=>({method:"GET",path,query,required,raw});
 export const POST=(path:string,body?:string[],required?:string[]):Route=>({method:"POST",path,body,required});
 export const PUT=(path:string,body?:string[],required?:string[]):Route=>({method:"PUT",path,body,required});
 export const PATCH=(path:string,body?:string[],required?:string[]):Route=>({method:"PATCH",path,body,required});
-export const DELETE=(path:string,body?:string[],required?:string[]):Route=>({method:"DELETE",path,body,required});
+export const DELETE=(path:string,body?:string[],required?:string[]):Route=>({method:"DELETE",path,body,required,...(path.startsWith("/packages/")?{api:"packages" as const}:{})});
