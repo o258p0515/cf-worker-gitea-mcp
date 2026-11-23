@@ -7,7 +7,7 @@ async function t(name, fn) {
   try { await fn(); tests.push([name, "PASS"]); console.log("PASS", name); }
   catch (error) { tests.push([name, "FAIL", String(error)]); console.error("FAIL", name, error); }
 }
-const req = (path, init = {}) => fetch(base + path, init);
+const req = (path, init = {}) => fetch(base + path, { ...init, signal: init.signal || AbortSignal.timeout(15000) });
 const post = (path, body, headers = {}) => req(path, {
   method: "POST",
   headers: { "content-type": "application/json", Accept: "application/json, text/event-stream", ...headers },
@@ -36,6 +36,9 @@ await t("T4 login/meta/samples", async () => {
   assert.equal(r.status, 200); cookie = (r.headers.get("set-cookie") || "").split(";")[0];
   assert.ok(cookie); assert.match(r.headers.get("set-cookie"), /HttpOnly/i); assert.match(r.headers.get("set-cookie"), /Secure/i);
   const h = { Cookie: cookie };
+  const page = await req("/api", { headers: h });
+  assert.equal(page.status, 200); const html = await page.text();
+  assert.match(html, /Gitea MCP Playground/); assert.match(html, /Playground load failed/);
   const m = await (await req("/api/meta", { headers: h })).json();
   const s = await (await req("/api/samples", { headers: h })).json();
   assert.ok(m.tools.length >= 15); assert.ok(s.me.login && s.owner && s.repo);

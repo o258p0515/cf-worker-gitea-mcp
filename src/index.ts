@@ -29,7 +29,7 @@ async function run(request:Request,env:Env,ctx:ExecutionContext):Promise<Respons
   if(!a.ok)return new Response("Unauthorized",{status:401,headers:{"WWW-Authenticate":'Bearer resource_metadata="https://'+env.CF_DOMAIN+'/.well-known/oauth-protected-resource"'}});
   const g=new Gitea(env,a.token||env.GITEA_ACCESS_TOKEN);
   const factory=()=>{const s=new McpServer({name:"gitea-mcp-worker",version:BUILD_VERSION});for(const t of tools)s.registerTool(t.name,{description:t.description,inputSchema:t.schema},async(args:any)=>{try{return {content:[{type:"text" as const,text:JSON.stringify(await t.run(args,g,{domain:env.CF_DOMAIN,giteaHost:env.GITEA_HOST}))}]}}catch(e){return {isError:true as const,content:[{type:"text" as const,text:String(e)}]}}});return s};
-  return createMcpHandler(factory,{route:"/mcp",allowedHostnames:[new URL(request.url).hostname],legacy:"stateless"})(request,env,ctx);
+  return createMcpHandler(factory,{route:"/mcp",allowedHostnames:[env.CF_DOMAIN],legacy:"stateless"})(request,env,ctx);
  }
  return new Response("Not Found",{status:404});
 }
