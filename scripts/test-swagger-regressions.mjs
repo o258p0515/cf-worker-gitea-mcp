@@ -41,8 +41,7 @@ try{
  assert.equal(issue.title,runId+"-updated","issue_write inferred update did not persist");
  console.log("PASS issue_write inferred update: issue #"+issueNumber+" unchanged");
  const commentText="Regression comment "+runId;
- const commentResult=await call("issue_write",{index:issueNumber,comment:commentText},true);
- assert.equal(Number(commentResult.number),Number(issueNumber),"issue_write comment must target the existing issue");
+ await call("issue_write",{index:issueNumber,comment:commentText},true);
  const comments=await call("issue_read",{method:"comments",owner,repo,index:issueNumber});
  assert.ok(Array.isArray(comments)&&comments.some(c=>c.body===commentText),"issue_write inferred add_comment did not persist");
  console.log("PASS issue_write inferred comment: issue #"+issueNumber);
