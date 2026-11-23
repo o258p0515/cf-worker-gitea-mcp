@@ -15,10 +15,20 @@ export const fields:Record<string,z.ZodTypeAny>={
 };
 export type Route={method:string;path:string;body?:string[];query?:string[];required?:string[];raw?:boolean};
 const enc=(v:unknown)=>encodeURIComponent(String(v??""));
+function specialClient(g:Gitea,a:Record<string,any>):Gitea{
+ return new Proxy(g,{get(target,key){
+  if(key==="request")return (route:string,init?:RequestInit)=>{
+   const resolved=route.replace(/\{owner\}/g,()=>{if(!a.owner)throw new Error("owner is required for this Gitea API route");return enc(a.owner)}).replace(/\{repo\}/g,()=>{if(!a.repo)throw new Error("repo is required for this Gitea API route");return enc(a.repo)});
+   return target.request(resolved,init);
+  };
+  const value=Reflect.get(target,key,target);
+  return typeof value==="function"?value.bind(target):value;
+ }}) as Gitea;
+}
 export const path=(template:string,a:Record<string,any>)=>template.replace(/\{([^}]+)\}/g,(_m,k:string)=>enc(a[k]));
 export function makeTool(name:string,scope:string,access:"read"|"write",description:string,routes:Record<string,Route>,sampleInput:Record<string,unknown>={},special?:(a:any,g:Gitea,meta:Record<string,unknown>)=>Promise<unknown>):ToolDef{
  const methods=Object.keys(routes);const schema=z.object({...fields,...(methods.length>1||(methods.length===1&&methods[0]!=="default")?{method:z.enum(methods as [string,...string[]]).default(methods[0])}:{})}).passthrough();
- return {name,scope,category:scope,access,description,schema,sampleInput,upstream:[name],extension:false,run:async(a:any,g:Gitea,meta:Record<string,unknown>)=>{if(special)return special(a,g,meta);const key=a.method||"default",r=routes[key];if(!r)throw new Error(`Unsupported method '${key}' for ${name}`);for(const k of r.required||[])if(a[k]===undefined||a[k]==="")throw new Error(`${k} is required for ${name}.${key}`);const p=path(r.path,a);if(r.method==="GET"){const q=new URLSearchParams();for(const k of r.query||[])if(a[k]!==undefined&&a[k]!==null&&a[k]!=="")q.set(k,Array.isArray(a[k])?a[k].join(","):String(a[k]));return r.raw?g.requestText(p+(q.size?"?"+q:"")):g.request(p+(q.size?"?"+q:""));}const b=r.body?.length?Object.fromEntries(r.body.filter(k=>a[k]!==undefined).map(k=>[k,a[k]])):undefined;return g.request(p,{method:r.method,...(b?{body:JSON.stringify(b)}:{})});}};
+ return {name,scope,category:scope,access,description,schema,sampleInput,upstream:[name],extension:false,run:async(a:any,g:Gitea,meta:Record<string,unknown>)=>{if(special)return special(a,specialClient(g,a),meta);const key=a.method||"default",r=routes[key];if(!r)throw new Error(`Unsupported method '${key}' for ${name}`);for(const k of r.required||[])if(a[k]===undefined||a[k]==="")throw new Error(`${k} is required for ${name}.${key}`);const p=path(r.path,a);if(r.method==="GET"){const q=new URLSearchParams();for(const k of r.query||[])if(a[k]!==undefined&&a[k]!==null&&a[k]!=="")q.set(k,Array.isArray(a[k])?a[k].join(","):String(a[k]));return r.raw?g.requestText(p+(q.size?"?"+q:"")):g.request(p+(q.size?"?"+q:""));}const b=r.body?.length?Object.fromEntries(r.body.filter(k=>a[k]!==undefined).map(k=>[k,a[k]])):undefined;return g.request(p,{method:r.method,...(b?{body:JSON.stringify(b)}:{})});}};
 }
 export const GET=(path:string,query?:string[],required?:string[],raw=false):Route=>({method:"GET",path,query,required,raw});
 export const POST=(path:string,body?:string[],required?:string[]):Route=>({method:"POST",path,body,required});
