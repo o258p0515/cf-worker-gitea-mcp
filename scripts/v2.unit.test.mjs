@@ -82,7 +82,7 @@ test("actions_run_read falls back to Git tree when workflow listing API panics",
  const g={request:async path=>{calls.push(path);if(path==="/repos/acme/demo/actions/workflows")throw new Error("Gitea API 500: PANIC: runtime error");if(path==="/repos/acme/demo")return {default_branch:"main"};if(path==="/repos/acme/demo/git/trees/main?recursive=1")return {tree:[{path:".github/workflows/ci.yml",type:"blob",sha:"a",size:10},{path:".gitea/workflows/release.yaml",type:"blob",sha:"b",size:20},{path:"README.md",type:"blob",sha:"c",size:5}]};throw new Error("Unexpected request "+path);}};
  const result=await tool.run({method:"list_workflows",owner:"acme",repo:"demo"},g,{});
  assert.equal(result.source,"git_tree_fallback");
- assert.equal(result.upstreamApiError,"Gitea API 500: PANIC: runtime error");
+ assert.equal(result.upstreamApiError,"Error: Gitea API 500: PANIC: runtime error");
  assert.deepEqual(result.workflows.map(x=>x.path),[".github/workflows/ci.yml",".gitea/workflows/release.yaml"]);
  assert.deepEqual(calls,["/repos/acme/demo/actions/workflows","/repos/acme/demo","/repos/acme/demo/git/trees/main?recursive=1"]);
 });
