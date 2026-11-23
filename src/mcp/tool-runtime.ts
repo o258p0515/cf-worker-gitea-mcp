@@ -37,11 +37,11 @@ export function makeTool(name:string,scope:string,access:"read"|"write",descript
    if(args.index===undefined&&issueIndex!==undefined)args.index=issueIndex;
    if(args.method===undefined){
     if(issueIndex!==undefined){
-     if(typeof args.comment==="string"&&args.comment.length>0)args.method="add_comment";
+     if(typeof args.comment==="string"&&args.comment.length>0){args.method="add_comment";if(args.body===undefined)args.body=args.comment;}
      else if(["title","body","state","assignees","milestone","due_date"].some(k=>args[k]!==undefined))args.method="update";
      else throw new Error("method is required for issue_write when index is provided without update fields or comment");
     }else args.method="create";
-   }
+   }else if(args.method==="add_comment"&&args.body===undefined&&typeof args.comment==="string")args.body=args.comment;
   }
   if(special)return special(args,specialClient(g,args),meta);
   const key=args.method||"default",r=routes[key];if(!r)throw new Error(`Unsupported method '${key}' for ${name}`);
