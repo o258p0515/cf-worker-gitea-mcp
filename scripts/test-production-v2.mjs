@@ -27,7 +27,7 @@ const smoke=[
  ["commit_read",{method:"list",owner:"code-dh-hospital",repo:"dh-issue-listener"}],
  ["release_read",{method:"list",owner:"code-dh-hospital",repo:"dh-issue-listener"}]
 ];
-let apiSuccess=0,mcpSuccess=0;const failures=[];
+let apiSuccess=0,mcpSuccess=0;
 for(const [name,overrides] of smoke){
  const sampleInput=samples.inputs?.[name]||{};
  const input={...sampleInput,...overrides};
