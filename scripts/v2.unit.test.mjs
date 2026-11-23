@@ -8,7 +8,7 @@ import {join} from "node:path";
 import {mask} from "./mask.mjs";
 const temp=await mkdtemp(join(tmpdir(),"gitea-v2-tests-"));
 async function bundle(entry,name){const outfile=join(temp,name+".mjs");await build({entryPoints:[entry],bundle:true,platform:"node",format:"esm",outfile,logLevel:"silent"});return import(pathToFileURL(outfile).href);}
-const [{tools,TOOL_NAMES},filter,client,repository,management]=await Promise.all([bundle("src/mcp/registry.ts","registry"),bundle("src/mcp/filter.ts","filter"),bundle("src/gitea/client.ts","client"),bundle("src/mcp/tools/repository-file.ts","repository-file"),bundle("src/mcp/tools/management.ts","management")]);
+const [{tools,TOOL_NAMES},filter,client,repository,management,actions]=await Promise.all([bundle("src/mcp/registry.ts","registry"),bundle("src/mcp/filter.ts","filter"),bundle("src/gitea/client.ts","client"),bundle("src/mcp/tools/repository-file.ts","repository-file"),bundle("src/mcp/tools/management.ts","management"),bundle("src/mcp/tools/actions.ts","actions")]);
 test("V2 registry contains exactly 48 unique tool names",()=>{assert.equal(tools.length,48);assert.equal(new Set(TOOL_NAMES).size,48);const expected=["get_gitea_mcp_server_version","get_me","get_user_orgs","create_organization","search_users","search_org_teams","search_repos","search_issues","notification_read","notification_write","label_read","label_write","milestone_read","milestone_write","wiki_read","wiki_write","timetracking_read","timetracking_write","package_read","package_write","project_read","project_write","list_issues","issue_read","issue_write","list_pull_requests","pull_request_read","pull_request_write","pull_request_review_write","actions_config_read","actions_config_write","actions_run_read","actions_run_write","repo_read","repo_write","get_repository_tree","get_file_contents","get_dir_contents","create_or_update_file","delete_file","branch_read","branch_write","tag_read","tag_write","commit_read","commit_write","release_read","release_write"];assert.deepEqual([...TOOL_NAMES].sort(),expected.sort());});
 test("all tools have descriptions, object schemas and valid sample methods",()=>{for(const t of tools){assert.ok(t.description.length>8,t.name);assert.equal(t.schema.toJSONSchema().type,"object",t.name);assert.ok(t.sampleInput&&typeof t.sampleInput==="object",t.name);const methods=t.schema.toJSONSchema().properties?.method?.enum;if(methods)assert.ok(methods.includes(t.sampleInput.method),t.name);}});
 test("default filter activates all tools and read-only hides writes",()=>{assert.equal(filter.getActiveTools(tools,{}).length,48);const active=filter.getActiveTools(tools,{GITEA_READONLY:"true"});assert.ok(active.length>0&&active.length<48);assert.ok(active.every(t=>t.access==="read"));});
@@ -75,5 +75,15 @@ test("project_write reports unsupported upstream Projects API without a mutation
  assert.equal(result.supported,false);
  assert.equal(result.reason,"upstream_project_api_unavailable");
  assert.match(result.message,/no project mutation was applied/);
+});
+test("actions_run_read falls back to Git tree when workflow listing API panics",async()=>{
+ const tool=actions.actionsTools.find(t=>t.name==="actions_run_read");
+ const calls=[];
+ const g={request:async path=>{calls.push(path);if(path==="/repos/acme/demo/actions/workflows")throw new Error("Gitea API 500: PANIC: runtime error");if(path==="/repos/acme/demo")return {default_branch:"main"};if(path==="/repos/acme/demo/git/trees/main?recursive=1")return {tree:[{path:".github/workflows/ci.yml",type:"blob",sha:"a",size:10},{path:".gitea/workflows/release.yaml",type:"blob",sha:"b",size:20},{path:"README.md",type:"blob",sha:"c",size:5}]};throw new Error("Unexpected request "+path);}};
+ const result=await tool.run({method:"list_workflows",owner:"acme",repo:"demo"},g,{});
+ assert.equal(result.source,"git_tree_fallback");
+ assert.equal(result.upstreamApiError,"Gitea API 500: PANIC: runtime error");
+ assert.deepEqual(result.workflows.map(x=>x.path),[".github/workflows/ci.yml",".gitea/workflows/release.yaml"]);
+ assert.deepEqual(calls,["/repos/acme/demo/actions/workflows","/repos/acme/demo","/repos/acme/demo/git/trees/main?recursive=1"]);
 });
 await rm(temp,{recursive:true,force:true});
