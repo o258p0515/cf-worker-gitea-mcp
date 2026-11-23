@@ -8,6 +8,7 @@ import {isAuthed,login,logout} from "./auth/swagger-auth";
 import {oauth} from "./auth/oauth";
 import {loginPage,playground} from "./ui/swagger";
 import {BUILD_VERSION,DEPLOYED_AT_VN} from "./generated-version";
+interface ExecutionContext { waitUntil(promise:Promise<unknown>):void; passThroughOnException():void; }
 const j=(x:any,s=200)=>Response.json(x,{status:s});
 async function run(request:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  const u=new URL(request.url),p=u.pathname;
