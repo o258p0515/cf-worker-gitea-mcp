@@ -14,6 +14,30 @@ async function readProjectWithCapabilityFallback(a:any,g:any){
   return {supported:false,reason:"upstream_project_api_unavailable",endpoint:route,message:"This Gitea instance returned 404 for the repository Projects API. Verify the Gitea version and Projects unit permissions; other MCP tools remain available."};
  }
 }
+async function writeProjectWithCapabilityFallback(a:any,g:any){
+ const base="/repos/"+encodeURIComponent(a.owner)+"/"+encodeURIComponent(a.repo)+"/projects";
+ const id=encodeURIComponent(a.id);
+ const column=encodeURIComponent(a.column_id);
+ const issue=encodeURIComponent(a.issue_id);
+ const routes:Record<string,{path:string;method:string;body:string[]}>={
+  create_repo_project:{path:base,method:"POST",body:["title","description","state","board_type"]},
+  update_project:{path:base+"/"+id,method:"PATCH",body:["title","description","state"]},
+  delete_project:{path:base+"/"+id,method:"DELETE",body:[]},
+  create_column:{path:base+"/"+id+"/columns",method:"POST",body:["title"]},
+  update_column:{path:base+"/"+id+"/columns/"+column,method:"PATCH",body:["title"]},
+  delete_column:{path:base+"/"+id+"/columns/"+column,method:"DELETE",body:[]},
+  move_issue:{path:base+"/"+id+"/issues/"+issue+"/move",method:"POST",body:["column_id","sorting"]}
+ };
+ const route=routes[a.method];
+ if(!route)throw new Error("Unsupported project_write method: "+a.method);
+ const body=Object.fromEntries(route.body.filter(key=>a[key]!==undefined).map(key=>[key,a[key]]));
+ try{return await g.request(route.path,{method:route.method,...(Object.keys(body).length?{body:JSON.stringify(body)}:{})});}
+ catch(error){
+  if(!/Gitea API 404/.test(String(error)))throw error;
+  return {supported:false,reason:"upstream_project_api_unavailable",endpoint:route.path,message:"This Gitea instance returned 404 for the repository Projects API. Verify the Gitea version and Projects unit permissions; no project mutation was applied."};
+ }
+}
+
 export const managementTools=[
 makeTool("notification_read","notification","read","List notifications globally or by repository and read a thread",{list:GET("/notifications",["all","status_types","since","before","page","limit"]),list_repo:GET(R+"/notifications",["all","status_types","since","before","page","limit"],["owner","repo"]),get_thread:GET("/notifications/threads/{id}",undefined,["id"])},{method:"list",limit:30}),
 makeTool("notification_write","notification","write","Mark all, repository or individual thread notifications as read",{mark_all_read:PUT("/notifications",["last_read_at"]),mark_repo_read:PUT(R+"/notifications",["last_read_at"],["owner","repo"]),mark_thread_read:PATCH("/notifications/threads/{id}",["state"],["id"])},{method:"mark_all_read"}),
@@ -28,5 +52,5 @@ makeTool("timetracking_write","timetracking","write","Add/delete tracked time an
 makeTool("package_read","package","read","List packages, read package versions or list package files",{list:GET("/packages/{owner}",["type","q","page","limit"],["owner"]),get:GET("/packages/{owner}/{type}/{name}/{version}",undefined,["owner","type","name","version"]),list_files:GET("/packages/{owner}/{type}/{name}/{version}/files",["page","limit"],["owner","type","name","version"])},{method:"list",owner:""}),
 makeTool("package_write","package","write","Delete a package version permanently",{default:DELETE("/packages/{owner}/{type}/{name}/{version}",undefined,["owner","type","name","version"])},{owner:"",type:"generic",name:"mcp-test",version:"0.0.1"}),
 makeTool("project_read","project","read","List repository projects, read project/columns and issues in a column",{list_repo:GET(R+"/projects",["page","limit","state"],["owner","repo"]),get:GET(R+"/projects/{id}",undefined,["owner","repo","id"]),list_columns:GET(R+"/projects/{id}/columns",["page","limit"],["owner","repo","id"]),list_column_issues:GET(R+"/projects/{id}/columns/{column_id}/issues",["page","limit"],["owner","repo","id","column_id"])},{method:"list_repo",owner:"",repo:""},async(a,g)=>readProjectWithCapabilityFallback(a,g)),
-makeTool("project_write","project","write","Create/update/delete projects and columns or move an issue",{create_repo_project:POST(R+"/projects",["title","description","state","board_type"],["owner","repo","title"]),update_project:PATCH(R+"/projects/{id}",["title","description","state"],["owner","repo","id"]),delete_project:DELETE(R+"/projects/{id}",undefined,["owner","repo","id"]),create_column:POST(R+"/projects/{id}/columns",["title"],["owner","repo","id","title"]),update_column:PATCH(R+"/projects/{id}/columns/{column_id}",["title"],["owner","repo","id","column_id"]),delete_column:DELETE(R+"/projects/{id}/columns/{column_id}",undefined,["owner","repo","id","column_id"]),move_issue:POST(R+"/projects/{id}/issues/{issue_id}/move",["column_id","sorting"],["owner","repo","id","issue_id","column_id"])},{method:"create_repo_project",owner:"",repo:"",title:"MCP project"})
+makeTool("project_write","project","write","Create/update/delete projects and columns or move an issue",{create_repo_project:POST(R+"/projects",["title","description","state","board_type"],["owner","repo","title"]),update_project:PATCH(R+"/projects/{id}",["title","description","state"],["owner","repo","id"]),delete_project:DELETE(R+"/projects/{id}",undefined,["owner","repo","id"]),create_column:POST(R+"/projects/{id}/columns",["title"],["owner","repo","id","title"]),update_column:PATCH(R+"/projects/{id}/columns/{column_id}",["title"],["owner","repo","id","column_id"]),delete_column:DELETE(R+"/projects/{id}/columns/{column_id}",undefined,["owner","repo","id","column_id"]),move_issue:POST(R+"/projects/{id}/issues/{issue_id}/move",["column_id","sorting"],["owner","repo","id","issue_id","column_id"])},{method:"create_repo_project",owner:"",repo:"",title:"MCP project"},async(a,g)=>writeProjectWithCapabilityFallback(a,g))
 ];
