@@ -2,6 +2,9 @@ name: Deploy Gitea MCP Worker
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "README.md"
+      - "PRODUCTION_CHECKLIST.md"
   workflow_dispatch:
 permissions:
   contents: read
