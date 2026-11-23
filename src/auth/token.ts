@@ -1,0 +1,6 @@
+const enc=new TextEncoder();
+const b64=(s:string)=>btoa(s).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+const unb64=(s:string)=>atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4));
+export async function sign(payload:Record<string,unknown>,secret:string){const body=b64(String.fromCharCode(...enc.encode(JSON.stringify(payload))));const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const sig=new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(body)));return body+"."+b64(String.fromCharCode(...sig));}
+export async function verify(token:string,secret:string):Promise<Record<string,any>|null>{try{const [body,sig]=token.split(".");if(!body||!sig)return null;const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["verify"]);if(!await crypto.subtle.verify("HMAC",key,Uint8Array.from(unb64(sig),c=>c.charCodeAt(0)),enc.encode(body)))return null;const p=JSON.parse(unb64(body));return p.exp&&p.exp>=Math.floor(Date.now()/1000)?p:null;}catch{return null;}}
+export function equal(a:string,b:string){const x=enc.encode(a),y=enc.encode(b);let d=x.length^y.length;for(let i=0;i<Math.max(x.length,y.length);i++)d|=(x[i]||0)^(y[i]||0);return d===0;}

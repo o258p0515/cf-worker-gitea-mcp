@@ -1,0 +1,1 @@
+{"name":"gitea-mcp-worker","main":"src/index.ts","compatibility_date":"2026-10-01","compatibility_flags":["nodejs_compat"],"workers_dev":false,"routes":[{"pattern":"__CF_DOMAIN__","custom_domain":true}]}
