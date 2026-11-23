@@ -1,4 +1,4 @@
-name: Swagger API production tools test
+name: Swagger API full production E2E
 
 on:
   workflow_dispatch:
@@ -10,26 +10,49 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: swagger-api-production-e2e
+  cancel-in-progress: false
+
 jobs:
-  swagger-api:
+  swagger-api-e2e:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout deployed revision
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Test production Swagger API using repository secrets
+      - name: Validate production test secrets
         env:
           CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
           SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
           SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
-          GITEA_ACCESS_TOKEN: ${{ secrets.GITEA_ACCESS_TOKEN }}
           GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
           GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
         run: |
-          test -n "$GITEA_ACCESS_TOKEN" || { echo "::error::GITEA_ACCESS_TOKEN secret is missing"; exit 1; }
-          node scripts/test-swagger-api.mjs
+          test -n "$CF_DOMAIN" || { echo "::error::CF_DOMAIN missing"; exit 1; }
+          test -n "$SWAGGER_USERNAME" || { echo "::error::SWAGGER_USERNAME missing"; exit 1; }
+          test -n "$SWAGGER_PASSWORD" || { echo "::error::SWAGGER_PASSWORD missing"; exit 1; }
+          test -n "$GITEA_TEST_OWNER" || { echo "::error::GITEA_TEST_OWNER missing"; exit 1; }
+          test -n "$GITEA_TEST_REPO" || { echo "::error::GITEA_TEST_REPO missing"; exit 1; }
+      - name: Run all 48 tools through production Swagger API
+        env:
+          CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
+          SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
+          SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
+          GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
+          GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
+        run: node scripts/test-swagger-api.mjs
+      - name: Upload detailed E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swagger-api-e2e-report-${{ github.run_id }}
+          path: swagger-api-results.json
+          if-no-files-found: warn
+          retention-days: 30
