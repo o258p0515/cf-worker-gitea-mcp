@@ -52,7 +52,7 @@ for(const [name,overrides] of smoke){
  try{callRpc=JSON.parse(callRaw);}catch{const frames=callRaw.split(/\r?\n/).filter(x=>x.startsWith("data:")).map(x=>x.slice(5).trim());assert.ok(frames.length,name+" MCP JSON-RPC frame");callRpc=JSON.parse(frames.at(-1));}
  assert.ok(callRpc.result||callRpc.error,name+" MCP JSON-RPC result");
  assert.ok(callRpc.result,name+" MCP tool result");assert.notEqual(callRpc.result.isError,true,name+" MCP tool execution: "+(callRpc.result.content||[]).map(x=>x.text).join(" "));mcpSuccess++;
- const mcpText=(callRpc.result.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\\n");
+ const mcpText=(callRpc.result.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n");
  let mcpPayload;try{mcpPayload=JSON.parse(mcpText);}catch(error){if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))throw new Error(name+" MCP payload is not JSON: "+mcpText.slice(0,300));}
  if(name==="get_repository_tree")assert.ok(Array.isArray(mcpPayload?.tree)&&mcpPayload.tree.length>0,"MCP get_repository_tree must return actual tree entries");
  if(name==="get_file_contents")assert.ok(typeof mcpPayload?.decoded_content==="string"&&mcpPayload.decoded_content.length>0,"MCP get_file_contents must return decoded file content");
