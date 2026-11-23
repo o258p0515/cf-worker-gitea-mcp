@@ -12,12 +12,12 @@ const list=await post("/mcp",{jsonrpc:"2.0",id:1,method:"tools/list",params:{}},
 const sr=await req("/api/samples",{headers:{Cookie:cookie}});assert.equal(sr.status,200);const samples=await sr.json();
 const smoke=[
  ["get_gitea_mcp_server_version",{}],["get_me",{}],["get_user_orgs",{page:1,limit:5}],
- ["search_users",{q:"test",limit:5}],["search_org_teams",{q:"",limit:5}],["search_repos",{q:"dh-issue-listener",limit:5}],["search_issues",{q:"3556",limit:5}],
+ ["search_users",{q:"test",limit:5}],["search_org_teams",{org:"code-dh-hospital",q:"",limit:5}],["search_repos",{q:"dh-issue-listener",limit:5}],["search_issues",{q:"3556",limit:5}],
  ["notification_read",{method:"list",limit:5}],["label_read",{method:"list_repo"}],["milestone_read",{method:"list"}],["wiki_read",{method:"list"}],
- ["timetracking_read",{method:"list_user_times",limit:5}],["package_read",{method:"list"}],["project_read",{method:"list_repo"}],
+ ["timetracking_read",{method:"list_user_times",limit:5}],["package_read",{method:"list"}],["project_read",{method:"list_repo",owner:"code-dh-hospital",repo:"dh-issue-listener"}],
  ["list_issues",{state:"all",limit:5}],["issue_read",{method:"get",owner:"hdhiswork",repo:"YEUCAU",index:1039}],
- ["list_pull_requests",{state:"all",limit:5}],["pull_request_read",{method:"get",index:1}],
- ["actions_config_read",{method:"list_variables"}],["actions_run_read",{method:"list_workflows"}],
+ ["list_pull_requests",{state:"open",limit:5,owner:"code-dh-hospital",repo:"dh-hos-code-only"}],["pull_request_read",{method:"get",index:390,owner:"code-dh-hospital",repo:"dh-hos-code-only"}],
+ ["actions_config_read",{method:"list_variables",owner:"code-dh-hospital",repo:"dh-issue-listener"}],["actions_run_read",{method:"list_workflows",owner:"code-dh-hospital",repo:"dh-issue-listener"}],
  ["repo_read",{method:"get",owner:"code-dh-hospital",repo:"dh-issue-listener"}],
  ["get_repository_tree",{sha:"HEAD",owner:"code-dh-hospital",repo:"dh-issue-listener",recursive:true}],
  ["get_file_contents",{filepath:"README.md",ref:"main",owner:"code-dh-hospital",repo:"dh-issue-listener"}],
@@ -36,11 +36,11 @@ for(const [name,overrides] of smoke){
   if(input.repo===undefined)input.repo=samples.repo;
  }
  if(["search_org_teams","label_read","milestone_read","wiki_read","project_read"].includes(name)&&input.org===undefined)input.org=samples.owner||samples.me.login;
- if(name==="get_repository_tree"||name==="get_file_contents"||name==="get_dir_contents"||name==="repo_read"||name==="branch_read"||name==="tag_read"||name==="commit_read"||name==="release_read"){input.owner="code-dh-hospital";input.repo="dh-issue-listener";}
+ if(name==="get_repository_tree"||name==="get_file_contents"||name==="get_dir_contents"||name==="repo_read"||name==="branch_read"||name==="tag_read"||name==="commit_read"||name==="release_read"||name==="project_read"||name==="actions_config_read"||name==="actions_run_read"){input.owner="code-dh-hospital";input.repo="dh-issue-listener";}
  const api=await post("/api/execute",{name,input},{Cookie:cookie});
  assert.notEqual(api.status,500,name+" /api/execute HTTP 500");
  const result=await api.json();assert.equal(typeof result.ok,"boolean",name+" structured API result");
- if(result.ok)apiSuccess++;else failures.push(name+" API: "+result.error);
+ assert.equal(result.ok,true,name+" Gitea API tool execution: "+result.error);apiSuccess++;
  if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))assert.equal(result.ok,true,name+" repository/file read regression");
  const call=await post("/mcp",{jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:input}},{Authorization:"Bearer "+S("MCP_TOKEN")});
  assert.equal(call.status,200,name+" MCP transport");
