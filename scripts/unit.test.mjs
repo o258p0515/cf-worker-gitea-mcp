@@ -1,0 +1,1 @@
+import test from "node:test";import assert from "node:assert/strict";import {mask} from "./mask.mjs";test("mask formatting and lengths",()=>{assert.equal(mask("abcdefgh"),"abcd***");assert.equal(mask("abcd"),"ab***");assert.equal(mask("ab"),"a***");assert.equal(mask(""),"")});

@@ -1,0 +1,1 @@
+export const mask=v=>v.length>=8?v.slice(0,4)+"***":v.length>=4?v.slice(0,2)+"***":v.length?v[0]+"***":"";
