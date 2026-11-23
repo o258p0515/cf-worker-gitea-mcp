@@ -34,8 +34,10 @@ async function readFileWithFallback(a:any,g:any){
  let directError:unknown;
  try{
   const value=await g.request(direct+(a.ref?"?ref="+encodeURIComponent(a.ref):""));
-  if(value?.content)return {...value,decoded_content:g.decodeContent(value.content)};
-  if(value)return value;
+  // Gitea-compatible proxies sometimes return {} for Contents; only accept a real
+  // content payload and otherwise continue through Git Trees + Blobs.
+  if(value&&typeof value.content==="string")return {...value,decoded_content:g.decodeContent(value.content)};
+  if(value&&typeof value.decoded_content==="string")return value;
  }catch(error){
   if(!/Gitea API 404/.test(String(error)))throw error;
   directError=error;
@@ -44,7 +46,7 @@ async function readFileWithFallback(a:any,g:any){
  const entry=fileEntry(tree,filePath);
  if(!entry)throw directError||new Error(`File '${filePath}' was not found in ${a.owner}/${a.repo}`);
  const blob=await g.request(base+"/git/blobs/"+encodeURIComponent(entry.sha));
- if(!blob?.content)throw new Error(`Git blob ${entry.sha} for '${filePath}' has no content`);
+ if(typeof blob?.content!=="string")throw new Error(`Git blob ${entry.sha} for '${filePath}' has no content`);
  return {
   name:filePath.split("/").at(-1),
   path:filePath,
