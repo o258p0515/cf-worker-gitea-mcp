@@ -101,7 +101,7 @@ await t("T13 authorization code PKCE via browser approval form", async () => {
   const verifier = "test-verifier-012345678901234567890123456789012345678901";
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/=/g, "").split("+").join("-").split("/").join("_");
+    .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
   const redirect = "https://any-random-agent.example/cb";
   const params = new URLSearchParams({
     response_type: "code",
@@ -156,7 +156,7 @@ await t("T13 authorization code PKCE via browser approval form", async () => {
     approve: true
   });
   assert.equal(custom.status, 302);
-  assert.match(custom.headers.get("location") || "", /^cursor:\\/\\/oauth\\/callback/);
+  assert.ok((custom.headers.get("location") || "").startsWith("cursor://oauth/callback"));
 });
 if (tests.some((x) => x[1] === "FAIL")) process.exit(1);
 console.log("ALL 13 PRODUCTION TESTS PASSED");
