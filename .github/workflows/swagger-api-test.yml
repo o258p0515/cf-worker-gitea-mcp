@@ -48,6 +48,15 @@ jobs:
           GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
           GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
         run: node scripts/test-swagger-api.mjs
+      - name: Clean stale E2E wiki pages
+        if: always()
+        env:
+          CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
+          SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
+          SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
+          GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
+          GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
+        run: node scripts/cleanup-swagger-fixture.mjs
       - name: Upload detailed E2E report
         if: always()
         uses: actions/upload-artifact@v4
