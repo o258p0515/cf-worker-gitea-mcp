@@ -41,6 +41,10 @@ for(const [name,overrides] of smoke){
  assert.notEqual(api.status,500,name+" /api/execute HTTP 500");
  const result=await api.json();assert.equal(typeof result.ok,"boolean",name+" structured API result");
  assert.equal(result.ok,true,name+" Gitea API tool execution: "+result.error);apiSuccess++;
+ const apiPayload=result.result??result.data;
+ if(name==="get_repository_tree")assert.ok(Array.isArray(apiPayload?.tree)&&apiPayload.tree.length>0,"get_repository_tree must return actual tree entries");
+ if(name==="get_file_contents")assert.ok(typeof apiPayload?.decoded_content==="string"&&apiPayload.decoded_content.length>0,"get_file_contents must return decoded file content");
+ if(name==="get_dir_contents")assert.ok(Array.isArray(apiPayload)&&apiPayload.length>0,"get_dir_contents must return actual directory entries");
  if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))assert.equal(result.ok,true,name+" repository/file read regression");
  const call=await post("/mcp",{jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:input}},{Authorization:"Bearer "+S("MCP_TOKEN")});
  assert.equal(call.status,200,name+" MCP transport");
@@ -48,6 +52,11 @@ for(const [name,overrides] of smoke){
  try{callRpc=JSON.parse(callRaw);}catch{const frames=callRaw.split(/\r?\n/).filter(x=>x.startsWith("data:")).map(x=>x.slice(5).trim());assert.ok(frames.length,name+" MCP JSON-RPC frame");callRpc=JSON.parse(frames.at(-1));}
  assert.ok(callRpc.result||callRpc.error,name+" MCP JSON-RPC result");
  assert.ok(callRpc.result,name+" MCP tool result");assert.notEqual(callRpc.result.isError,true,name+" MCP tool execution: "+(callRpc.result.content||[]).map(x=>x.text).join(" "));mcpSuccess++;
+ const mcpText=(callRpc.result.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\\n");
+ let mcpPayload;try{mcpPayload=JSON.parse(mcpText);}catch(error){if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))throw new Error(name+" MCP payload is not JSON: "+mcpText.slice(0,300));}
+ if(name==="get_repository_tree")assert.ok(Array.isArray(mcpPayload?.tree)&&mcpPayload.tree.length>0,"MCP get_repository_tree must return actual tree entries");
+ if(name==="get_file_contents")assert.ok(typeof mcpPayload?.decoded_content==="string"&&mcpPayload.decoded_content.length>0,"MCP get_file_contents must return decoded file content");
+ if(name==="get_dir_contents")assert.ok(Array.isArray(mcpPayload)&&mcpPayload.length>0,"MCP get_dir_contents must return actual directory entries");
  if(["get_repository_tree","get_file_contents","get_dir_contents"].includes(name))assert.notEqual(callRpc.result?.isError,true,name+" MCP repository/file read regression");
 }
 for(const name of writeNames){
