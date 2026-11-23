@@ -28,7 +28,7 @@ test("get_file_contents falls back from unavailable Contents API to Git blob",as
  const expected="Nội dung tiếng Việt";
  const encoded=btoa(unescape(encodeURIComponent(expected)));
  const calls=[];
- const g={request:async path=>{calls.push(path);if(path==="/repos/acme/demo/contents/docs/README.md")throw new Error("Gitea API 404: not found");if(path==="/repos/acme/demo/git/trees/main?recursive=1")return {tree:[{path:"docs/README.md",type:"blob",sha:"blob123",size:encoded.length}]};if(path==="/repos/acme/demo/git/blobs/blob123")return {sha:"blob123",size:encoded.length,encoding:"base64",content:encoded};throw new Error("Unexpected request "+path);},decodeContent:value=>new TextDecoder().decode(Uint8Array.from(atob(value),c=>c.charCodeAt(0)))};
+ const g={request:async path=>{calls.push(path);if(path==="/repos/acme/demo/contents/docs/README.md?ref=main")throw new Error("Gitea API 404: not found");if(path==="/repos/acme/demo/git/trees/main?recursive=1")return {tree:[{path:"docs/README.md",type:"blob",sha:"blob123",size:encoded.length}]};if(path==="/repos/acme/demo/git/blobs/blob123")return {sha:"blob123",size:encoded.length,encoding:"base64",content:encoded};throw new Error("Unexpected request "+path);},decodeContent:value=>new TextDecoder().decode(Uint8Array.from(atob(value),c=>c.charCodeAt(0)))};
  const result=await tool.run({owner:"acme",repo:"demo",filepath:"docs/README.md",ref:"main"},g,{});
  assert.equal(result.path,"docs/README.md");
  assert.equal(result.sha,"blob123");
