@@ -67,4 +67,13 @@ test("project_read reports unsupported upstream Projects API as a capability res
  assert.equal(result.reason,"upstream_project_api_unavailable");
  assert.match(result.message,/Gitea instance returned 404/);
 });
+test("project_write reports unsupported upstream Projects API without a mutation",async()=>{
+ const tool=management.managementTools.find(t=>t.name==="project_write");
+ let calls=0;
+ const result=await tool.run({method:"create_repo_project",owner:"acme",repo:"demo",title:"test"},{request:async()=>{calls++;throw new Error("Gitea API 404: 404 page not found");}},{});
+ assert.equal(calls,1);
+ assert.equal(result.supported,false);
+ assert.equal(result.reason,"upstream_project_api_unavailable");
+ assert.match(result.message,/no project mutation was applied/);
+});
 await rm(temp,{recursive:true,force:true});
