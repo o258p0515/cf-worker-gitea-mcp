@@ -14,3 +14,10 @@ const after=await call("wiki_read",{method:"list",owner,repo});
 const remaining=(Array.isArray(after)?after:[]).filter(p=>String(p?.title||"").startsWith("mcp-e2e-"));
 assert.equal(remaining.length,0,"Stale E2E wiki pages remain: "+JSON.stringify(remaining));
 console.log("Fixture wiki cleanup PASS; removed "+stale.length+" stale E2E pages.");
+const issues=await call("list_issues",{owner,repo,state:"open",limit:100});
+const staleIssues=(Array.isArray(issues)?issues:[]).filter(i=>i?.title==="[MCP E2E] Issue lifecycle verification");
+for(const issue of staleIssues){await call("issue_write",{method:"update",index:issue.number,state:"closed"},true);console.log("CLOSED legacy E2E issue",issue.number)}
+const openAfter=await call("list_issues",{owner,repo,state:"open",limit:100});
+const remainingIssues=(Array.isArray(openAfter)?openAfter:[]).filter(i=>i?.title==="[MCP E2E] Issue lifecycle verification");
+assert.equal(remainingIssues.length,0,"Legacy E2E issues remain open: "+JSON.stringify(remainingIssues));
+console.log("Fixture issue cleanup PASS; closed "+staleIssues.length+" legacy E2E issues.");
