@@ -19,8 +19,16 @@ const mcp = (headers, method = "tools/call", params = { name: "get_gitea_mcp_ser
   post("/mcp", { jsonrpc: "2.0", id: 1, method, params }, headers);
 
 await t("T1 health/version/Gitea", async () => {
-  const r = await req("/healthz"), j = await r.json();
-  assert.equal(r.status, 200); assert.equal(j.version, version); assert.equal(j.giteaReachable, true);
+  let last = {};
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    const r = await req("/healthz", { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+    last = await r.json().catch(() => ({}));
+    if (r.status === 200 && last.version === version && last.giteaReachable === true) return;
+    console.log("Waiting for production version", version, "attempt", attempt, "received", last.version || r.status);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  assert.equal(last.version, version, "production health endpoint did not converge to deployed BUILD_VERSION");
+  assert.equal(last.giteaReachable, true);
 });
 await t("T2 unauthenticated API", async () => {
   assert.equal((await req("/api")).status, 200);
