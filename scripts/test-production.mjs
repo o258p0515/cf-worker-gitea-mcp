@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {Script} from "node:vm";
 const base = "https://" + process.env.CF_DOMAIN;
 const version = process.env.BUILD_VERSION;
 const S = (k) => process.env[k] || "";
@@ -46,7 +47,7 @@ await t("T4 login/meta/samples/playground JavaScript", async () => {
   assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "authenticated playground script exists");
   const script = html.slice(scriptStart + 8, scriptEnd);
   console.log("PLAYGROUND_SCRIPT_BEGIN\\n" + script + "\\nPLAYGROUND_SCRIPT_END");
-  assert.doesNotThrow(() => new Function(script), "authenticated playground JavaScript must parse");
+  assert.doesNotThrow(() => new Script(script, {filename: "playground-inline.js"}), "authenticated playground JavaScript must parse");
   assert.ok(script, "authenticated playground script exists");
   assert.doesNotThrow(() => new Function(script[1]), "authenticated playground JavaScript must parse");
   const m = await (await req("/api/meta", { headers: h })).json();
