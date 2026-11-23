@@ -46,10 +46,8 @@ await t("T4 login/meta/samples/playground JavaScript", async () => {
   const scriptEnd = html.indexOf("</script>", scriptStart + 8);
   assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "authenticated playground script exists");
   const script = html.slice(scriptStart + 8, scriptEnd);
-  console.log("PLAYGROUND_SCRIPT_BEGIN\\n" + script + "\\nPLAYGROUND_SCRIPT_END");
   assert.doesNotThrow(() => new Script(script, {filename: "playground-inline.js"}), "authenticated playground JavaScript must parse");
   assert.ok(script, "authenticated playground script exists");
-  assert.doesNotThrow(() => new Function(script[1]), "authenticated playground JavaScript must parse");
   const m = await (await req("/api/meta", { headers: h })).json();
   const s = await (await req("/api/samples", { headers: h })).json();
   assert.ok(m.tools.length >= 15); assert.ok(s.me.login && s.owner && s.repo);
