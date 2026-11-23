@@ -172,8 +172,8 @@ async function handleOAuth(request: Request, env: Env): Promise<Response | null>
         );
         const encoded = btoa(String.fromCharCode(...new Uint8Array(digest)))
           .replace(/=/g, "")
-          .replace(/\\+/g, "-")
-          .replace(/\\//g, "_");
+          .split("+").join("-")
+          .split("/").join("_");
         const verifier = String(body.code_verifier || "");
         if (payload.method === "S256" ? encoded !== payload.challenge : verifier !== payload.challenge) {
           return json({ error: "invalid_grant" }, 400);
