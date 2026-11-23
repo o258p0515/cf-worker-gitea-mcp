@@ -1,10 +1,6 @@
 import {mask} from "./mask.mjs";
 const required=["CF_DOMAIN","CF_API_EMAIL","CF_API_KEY","GITEA_HOST","GITEA_ACCESS_TOKEN","SWAGGER_USERNAME","SWAGGER_PASSWORD","MCP_TOKEN","MCP_API_PASSPHRASE","MCP_OAUTH_CLIENT_ID","MCP_OAUTH_CLIENT_SECRET"];
-const optional=["CLOUDFLARE_ACCOUNT_ID","GITEA_EXTRA_HEADERS","GITEA_DEFAULT_OWNER","GITEA_DEFAULT_REPO","MCP_OAUTH_REDIRECT_URIS"];
-let fail=false;
-const rows=[...required,...optional].map(k=>{const v=process.env[k]||"",must=required.includes(k);if(!v&&must)fail=true;return {key:k,status:v?"PASS":must?"MISSING (BẮT BUỘC)":"MISSING (TÙY CHỌN)",masked:v?mask(v)+" ("+v.length+" ký tự)":""}});
-const table=["| Key | Status | Masked value |","|---|---|---|",...rows.map(x=>"| "+x.key+" | "+x.status+" | "+x.masked+" |")].join("\n");
-console.log(table);
-if(process.env.GITHUB_STEP_SUMMARY)await import("node:fs/promises").then(fs=>fs.appendFile(process.env.GITHUB_STEP_SUMMARY,table+"\n"));
-if(fail){console.error("ENV CHECK FAILED - THIẾU BIẾN MÔI TRƯỜNG BẮT BUỘC");process.exit(1)}
-console.log("ENV CHECK PASSED");
+const optional=["CLOUDFLARE_ACCOUNT_ID","GITEA_EXTRA_HEADERS","GITEA_DEFAULT_OWNER","GITEA_DEFAULT_REPO","GITEA_READONLY","GITEA_SCOPES","GITEA_TOOLS","GITEA_TEST_OWNER","GITEA_TEST_REPO","MCP_OAUTH_REDIRECT_URIS"];
+const notes={CF_DOMAIN:"Worker custom domain",CF_API_EMAIL:"Cloudflare account email",CF_API_KEY:"Cloudflare Global API Key; CI only",GITEA_HOST:"Gitea base URL",GITEA_ACCESS_TOKEN:"Gitea PAT; never commit",SWAGGER_USERNAME:"/api login",SWAGGER_PASSWORD:"/api password",MCP_TOKEN:"Static MCP bearer/API key",MCP_API_PASSPHRASE:"OAuth HMAC secret",MCP_OAUTH_CLIENT_ID:"OAuth client ID",MCP_OAUTH_CLIENT_SECRET:"OAuth client secret",GITEA_READONLY:"true/1 hides all write tools",GITEA_SCOPES:"Comma-separated scope allowlist",GITEA_TOOLS:"Comma-separated tool allowlist; union with scopes",GITEA_TEST_OWNER:"Disposable owner for guarded playground writes",GITEA_TEST_REPO:"Disposable repository for guarded playground writes",MCP_OAUTH_REDIRECT_URIS:"Optional OAuth redirect policy"};
+let fail=false;const rows=[...required,...optional].map(key=>{const value=process.env[key]||"",must=required.includes(key);if(!value&&must)fail=true;return {key,status:value?"PASS":must?"MISSING (BẮT BUỘC)":"MISSING (TÙY CHỌN)",masked:value?mask(value)+" ("+value.length+" ký tự)":"—",note:notes[key]||"Optional configuration"};});
+const table=["| Key | Status | Masked + Length | Note |","|---|---|---|---|",...rows.map(x=>"| "+x.key+" | "+x.status+" | "+x.masked+" | "+x.note+" |")].join("\n");console.log(table);if(process.env.GITHUB_STEP_SUMMARY)await import("node:fs/promises").then(fs=>fs.appendFile(process.env.GITHUB_STEP_SUMMARY,table+"\n"));if(fail){console.error("ENV CHECK FAILED - Configure missing required secrets in Settings > Secrets and variables > Actions.");process.exit(1);}console.log("ENV CHECK PASSED");

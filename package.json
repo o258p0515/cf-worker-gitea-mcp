@@ -1,1 +1,19 @@
-{"name":"gitea-mcp-worker","private":true,"type":"module","scripts":{"typecheck":"tsc --noEmit","test":"node --test scripts/unit.test.mjs","version":"node scripts/gen-version.mjs"},"dependencies":{"@modelcontextprotocol/server":"2.3.1","agents":"0.30.0","zod":"^4.1.12"},"devDependencies":{"typescript":"^5.9.3","wrangler":"^4.50.0"}}
+{
+  "name": "gitea-mcp-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test scripts/*.test.mjs",
+    "version": "node scripts/gen-version.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "0.30.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.50.0"
+  }
+}

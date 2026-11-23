@@ -21,6 +21,11 @@ jobs:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITEA_HOST: ${{ secrets.GITEA_HOST }}
           GITEA_ACCESS_TOKEN: ${{ secrets.GITEA_ACCESS_TOKEN }}
+          GITEA_READONLY: ${{ secrets.GITEA_READONLY }}
+          GITEA_SCOPES: ${{ secrets.GITEA_SCOPES }}
+          GITEA_TOOLS: ${{ secrets.GITEA_TOOLS }}
+          GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
+          GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
           SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
           SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
           MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
@@ -72,6 +77,11 @@ jobs:
           GITEA_EXTRA_HEADERS: ${{ secrets.GITEA_EXTRA_HEADERS }}
           GITEA_DEFAULT_OWNER: ${{ secrets.GITEA_DEFAULT_OWNER }}
           GITEA_DEFAULT_REPO: ${{ secrets.GITEA_DEFAULT_REPO }}
+          GITEA_READONLY: ${{ secrets.GITEA_READONLY }}
+          GITEA_SCOPES: ${{ secrets.GITEA_SCOPES }}
+          GITEA_TOOLS: ${{ secrets.GITEA_TOOLS }}
+          GITEA_TEST_OWNER: ${{ secrets.GITEA_TEST_OWNER }}
+          GITEA_TEST_REPO: ${{ secrets.GITEA_TEST_REPO }}
           SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
           SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
           MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
@@ -80,7 +90,7 @@ jobs:
           MCP_OAUTH_CLIENT_SECRET: ${{ secrets.MCP_OAUTH_CLIENT_SECRET }}
           MCP_OAUTH_REDIRECT_URIS: ${{ secrets.MCP_OAUTH_REDIRECT_URIS }}
         run: |
-          node -e 'const fs=require("fs");const ks="CF_DOMAIN GITEA_HOST GITEA_ACCESS_TOKEN GITEA_EXTRA_HEADERS GITEA_DEFAULT_OWNER GITEA_DEFAULT_REPO SWAGGER_USERNAME SWAGGER_PASSWORD MCP_TOKEN MCP_API_PASSPHRASE MCP_OAUTH_CLIENT_ID MCP_OAUTH_CLIENT_SECRET MCP_OAUTH_REDIRECT_URIS".split(" ");const o={};for(const k of ks)if(process.env[k])o[k]=process.env[k];fs.writeFileSync("/tmp/worker-secrets.json",JSON.stringify(o))'
+          node -e 'const fs=require("fs");const ks="CF_DOMAIN GITEA_HOST GITEA_ACCESS_TOKEN GITEA_EXTRA_HEADERS GITEA_DEFAULT_OWNER GITEA_DEFAULT_REPO GITEA_READONLY GITEA_SCOPES GITEA_TOOLS GITEA_TEST_OWNER GITEA_TEST_REPO SWAGGER_USERNAME SWAGGER_PASSWORD MCP_TOKEN MCP_API_PASSPHRASE MCP_OAUTH_CLIENT_ID MCP_OAUTH_CLIENT_SECRET MCP_OAUTH_REDIRECT_URIS".split(" ");const o={};for(const k of ks)if(process.env[k])o[k]=process.env[k];fs.writeFileSync("/tmp/worker-secrets.json",JSON.stringify(o))'
           npx wrangler secret bulk /tmp/worker-secrets.json -c wrangler.deploy.jsonc
       - name: Production acceptance tests
         env:
@@ -94,3 +104,10 @@ jobs:
           MCP_OAUTH_CLIENT_ID: ${{ secrets.MCP_OAUTH_CLIENT_ID }}
           MCP_OAUTH_CLIENT_SECRET: ${{ secrets.MCP_OAUTH_CLIENT_SECRET }}
         run: node scripts/test-production.mjs
+      - name: V2 T14 production parity and smoke tests
+        env:
+          CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
+          SWAGGER_USERNAME: ${{ secrets.SWAGGER_USERNAME }}
+          SWAGGER_PASSWORD: ${{ secrets.SWAGGER_PASSWORD }}
+          MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
+        run: node scripts/test-production-v2.mjs
