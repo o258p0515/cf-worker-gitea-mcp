@@ -37,6 +37,25 @@ jobs:
         env:
           CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
         run: node -e 'const fs=require("fs");fs.writeFileSync("wrangler.deploy.jsonc",fs.readFileSync("wrangler.jsonc","utf8").replace("__CF_DOMAIN__",process.env.CF_DOMAIN))'
+      - name: Inspect Cloudflare zones and configured hostnames
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN_GLOBAL }}
+          CF_DOMAIN: ${{ secrets.CF_DOMAIN }}
+          GITEA_HOST: ${{ secrets.GITEA_HOST }}
+        run: |
+          node --input-type=module <<'NODE'
+          const domain=process.env.CF_DOMAIN;
+          console.log("CF_DOMAIN hostname:",domain);
+          try { console.log("GITEA_HOST hostname:",new URL(process.env.GITEA_HOST).hostname); } catch { console.log("GITEA_HOST is not an absolute URL"); }
+          const r=await fetch("https://api.cloudflare.com/client/v4/zones?per_page=100",{headers:{Authorization:"Bearer "+process.env.CLOUDFLARE_API_TOKEN}});
+          const j=await r.json();
+          console.log("Cloudflare zones API HTTP:",r.status);
+          if(!r.ok){console.log("Cloudflare API errors:",JSON.stringify(j.errors));process.exit(0);}
+          const zones=j.result||[];
+          console.log("Visible zone names:",zones.map(z=>z.name).join(", ")||"(none)");
+          const matches=zones.filter(z=>domain===z.name||domain.endsWith("."+z.name));
+          console.log("Matching zone:",matches.map(z=>z.name+" ["+z.id+"]").join(", ")||"(none)");
+          NODE
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN_GLOBAL }}
