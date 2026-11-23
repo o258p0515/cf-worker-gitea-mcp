@@ -1,8 +1,12 @@
 import { makeTool,GET,POST,PUT,PATCH,DELETE } from "../tool-runtime";
 const R="/repos/{owner}/{repo}";
 async function readProjectWithCapabilityFallback(a:any,g:any){
+ if(!a.owner||!a.repo)throw new Error("owner and repo are required for project_read");
  const base="/repos/"+encodeURIComponent(a.owner)+"/"+encodeURIComponent(a.repo)+"/projects";
  const id=encodeURIComponent(a.id);
+ const method=a.method||"list_repo";
+ if(method!=="list_repo"&&!a.id)throw new Error("id is required for project_read."+method);
+ if(method==="list_column_issues"&&!a.column_id)throw new Error("column_id is required for project_read.list_column_issues");
  const routes:Record<string,string>={list_repo:base,get:base+"/"+id,list_columns:base+"/"+id+"/columns",list_column_issues:base+"/"+id+"/columns/"+encodeURIComponent(a.column_id)+"/issues"};
  const route=routes[a.method||"list_repo"];
  if(!route)throw new Error("Unsupported project_read method: "+a.method);
@@ -15,6 +19,10 @@ async function readProjectWithCapabilityFallback(a:any,g:any){
  }
 }
 async function writeProjectWithCapabilityFallback(a:any,g:any){
+ if(!a.owner||!a.repo)throw new Error("owner and repo are required for project_write");
+ const method=a.method;
+ const required:Record<string,string[]>={create_repo_project:["title"],update_project:["id"],delete_project:["id"],create_column:["id","title"],update_column:["id","column_id"],delete_column:["id","column_id"],move_issue:["id","issue_id","column_id"]};
+ for(const key of required[method]||[])if(a[key]===undefined||a[key]==="")throw new Error(key+" is required for project_write."+method);
  const base="/repos/"+encodeURIComponent(a.owner)+"/"+encodeURIComponent(a.repo)+"/projects";
  const id=encodeURIComponent(a.id);
  const column=encodeURIComponent(a.column_id);
