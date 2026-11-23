@@ -32,7 +32,14 @@ section{margin:1rem 0;padding:1rem;background:#fff;border:1px solid #e2e8f0;bord
 
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, function (char) {
-      return ({"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;","'":"&#39;"})[char];
+      switch (char) {
+        case "&": return "&amp;";
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case '"': return "&quot;";
+        case "'": return "&#39;";
+        default: return char;
+      }
     });
   }
 
