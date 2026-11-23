@@ -97,17 +97,66 @@ await t("T12 client credentials", async () => {
   assert.equal(r.status, 200); const j = await r.json();
   assert.equal((await mcp({ Authorization: "Bearer " + j.access_token }, "tools/call", { name: "get_me", arguments: {} })).status, 200);
 });
-await t("T13 authorization code PKCE", async () => {
+await t("T13 authorization code PKCE via browser approval form", async () => {
   const verifier = "test-verifier-012345678901234567890123456789012345678901";
-  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  const challenge = btoa(String.fromCharCode(...new Uint8Array(d))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
   const redirect = "https://any-random-agent.example/cb";
-  const r = await post("/oauth/authorize", { redirect_uri: redirect, client_id: S("MCP_OAUTH_CLIENT_ID"), state: "s1", code_challenge: challenge, code_challenge_method: "S256", passphrase: S("MCP_API_PASSPHRASE"), approve: true });
-  assert.equal(r.status, 302);
-  const code = new URL(r.headers.get("location")).searchParams.get("code");
-  const tr = await post("/oauth/token", { grant_type: "authorization_code", code, redirect_uri: redirect, code_verifier: verifier });
-  assert.equal(tr.status, 200); const j = await tr.json();
-  assert.equal((await mcp({ Authorization: "Bearer " + j.access_token }, "tools/call", { name: "get_me", arguments: {} })).status, 200);
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: S("MCP_OAUTH_CLIENT_ID"),
+    redirect_uri: redirect,
+    state: "state-from-client",
+    code_challenge: challenge,
+    code_challenge_method: "S256"
+  });
+  const approvalPage = await req("/oauth/authorize?" + params.toString());
+  assert.equal(approvalPage.status, 200);
+  const html = await approvalPage.text();
+  for (const field of ["redirect_uri", "client_id", "state", "code_challenge", "code_challenge_method"]) {
+    assert.match(html, new RegExp('name="' + field + '"'));
+  }
+  const form = new URLSearchParams({
+    redirect_uri: redirect,
+    client_id: S("MCP_OAUTH_CLIENT_ID"),
+    response_type: "code",
+    state: "state-from-client",
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    passphrase: S("MCP_API_PASSPHRASE"),
+    approve: "1"
+  });
+  const approved = await req("/oauth/authorize", {
+    method: "POST",
+    headers: {"content-type": "application/x-www-form-urlencoded"},
+    body: form.toString(),
+    redirect: "manual"
+  });
+  assert.equal(approved.status, 302);
+  const callback = new URL(approved.headers.get("location"));
+  assert.equal(callback.searchParams.get("state"), "state-from-client");
+  const code = callback.searchParams.get("code");
+  assert.ok(code);
+  const tokenResponse = await post("/oauth/token", {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirect,
+    code_verifier: verifier
+  });
+  assert.equal(tokenResponse.status, 200);
+  const token = await tokenResponse.json();
+  assert.equal((await mcp({Authorization: "Bearer " + token.access_token}, "tools/call", {
+    name: "get_me", arguments: {}
+  })).status, 200);
+  const custom = await post("/oauth/authorize", {
+    redirect_uri: "cursor://oauth/callback",
+    client_id: S("MCP_OAUTH_CLIENT_ID"),
+    passphrase: S("MCP_API_PASSPHRASE"),
+    approve: true
+  });
+  assert.equal(custom.status, 302);
+  assert.match(custom.headers.get("location") || "", /^cursor:\\/\\/oauth\\/callback/);
 });
 if (tests.some((x) => x[1] === "FAIL")) process.exit(1);
 console.log("ALL 13 PRODUCTION TESTS PASSED");
